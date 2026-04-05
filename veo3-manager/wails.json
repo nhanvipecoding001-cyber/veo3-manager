@@ -1,0 +1,20 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "veo3-manager",
+  "outputfilename": "Veo3Manager",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "Veo3 Manager",
+    "email": ""
+  },
+  "info": {
+    "companyName": "Veo3 Manager",
+    "productName": "Veo3 Manager",
+    "productVersion": "1.0.0",
+    "copyright": "Copyright © 2025 Veo3 Manager. All rights reserved.",
+    "comments": "AI Video Generation Manager - Batch create videos with Google Veo3"
+  }
+}
