@@ -11,10 +11,10 @@
     "email": ""
   },
   "info": {
-    "companyName": "Veo3 Manager",
-    "productName": "Veo3 Manager",
-    "productVersion": "1.0.0",
-    "copyright": "Copyright © 2025 Veo3 Manager. All rights reserved.",
+    "companyName": "Thanh Nhàn VEO 3",
+    "productName": "Thanh Nhàn VEO 3",
+    "productVersion": "1.1.0",
+    "copyright": "Copyright © 2025 Thanh Nhàn VEO 3. All rights reserved.",
     "comments": "AI Video Generation Manager - Batch create videos with Google Veo3"
   }
 }

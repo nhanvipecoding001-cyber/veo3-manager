@@ -66,6 +66,14 @@ export function ResumeQueue() {
   return window['go']['main']['App']['ResumeQueue']();
 }
 
+export function SelectDirectory(arg1) {
+  return window['go']['main']['App']['SelectDirectory'](arg1);
+}
+
+export function SelectFile(arg1) {
+  return window['go']['main']['App']['SelectFile'](arg1);
+}
+
 export function StartQueue() {
   return window['go']['main']['App']['StartQueue']();
 }
@@ -80,6 +88,18 @@ export function UpdateSetting(arg1, arg2) {
 
 export function UpdateSettings(arg1) {
   return window['go']['main']['App']['UpdateSettings'](arg1);
+}
+
+export function ValidateChromePath(arg1) {
+  return window['go']['main']['App']['ValidateChromePath'](arg1);
+}
+
+export function ValidateDownloadFolder(arg1) {
+  return window['go']['main']['App']['ValidateDownloadFolder'](arg1);
+}
+
+export function ValidateUserDataDir(arg1) {
+  return window['go']['main']['App']['ValidateUserDataDir'](arg1);
 }
 
 export function WindowClose() {

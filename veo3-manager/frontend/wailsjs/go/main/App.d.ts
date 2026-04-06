@@ -36,6 +36,10 @@ export function PauseQueue():Promise<void>;
 
 export function ResumeQueue():Promise<void>;
 
+export function SelectDirectory(arg1:string):Promise<string>;
+
+export function SelectFile(arg1:string):Promise<string>;
+
 export function StartQueue():Promise<void>;
 
 export function StopQueue():Promise<void>;
@@ -43,6 +47,12 @@ export function StopQueue():Promise<void>;
 export function UpdateSetting(arg1:string,arg2:string):Promise<void>;
 
 export function UpdateSettings(arg1:Record<string, string>):Promise<void>;
+
+export function ValidateChromePath(arg1:string):Promise<string>;
+
+export function ValidateDownloadFolder(arg1:string):Promise<string>;
+
+export function ValidateUserDataDir(arg1:string):Promise<string>;
 
 export function WindowClose():Promise<void>;
 

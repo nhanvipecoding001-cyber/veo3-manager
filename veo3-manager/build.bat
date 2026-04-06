@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 echo ==========================================
-echo   Veo3 Manager - Production Build v1.0.0
+echo   Veo3 Manager - Production Build v1.1.0
 echo ==========================================
 echo.
 

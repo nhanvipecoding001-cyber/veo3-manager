@@ -20,7 +20,7 @@ func main() {
 	app := NewApp(cfg)
 
 	err := wails.Run(&options.App{
-		Title:            "Veo3 Manager",
+		Title:            "Thanh Nhàn VEO 3",
 		Width:            1280,
 		Height:           800,
 		MinWidth:         960,

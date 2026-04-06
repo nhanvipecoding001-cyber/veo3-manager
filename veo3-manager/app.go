@@ -179,6 +179,91 @@ func (a *App) GetConfig() *config.AppConfig {
 	return a.cfg
 }
 
+// === File/Folder Dialogs ===
+
+func (a *App) SelectFile(title string) (string, error) {
+	return runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: title,
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Executable (*.exe)", Pattern: "*.exe"},
+			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
+		},
+	})
+}
+
+func (a *App) SelectDirectory(title string) (string, error) {
+	return runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: title,
+	})
+}
+
+// === Validation ===
+
+func (a *App) ValidateChromePath(path string) string {
+	if path == "" {
+		// Auto-detect
+		detected := chrome.DefaultChromeConfig().ChromePath
+		if detected == "" {
+			return "error:Không tìm thấy Chrome trên máy. Vui lòng cài Chrome hoặc nhập đường dẫn thủ công."
+		}
+		return "ok:Tự động phát hiện: " + detected
+	}
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return "error:Đường dẫn không tồn tại: " + path
+	}
+	if info.IsDir() {
+		return "error:Đây là thư mục, cần trỏ đến file chrome.exe"
+	}
+	return "ok:Đường dẫn hợp lệ: " + path
+}
+
+func (a *App) ValidateUserDataDir(path string) string {
+	if path == "" {
+		defaultDir := filepath.Join(os.Getenv("APPDATA"), "veo3-manager", "chrome-data")
+		return "ok:Sử dụng mặc định: " + defaultDir
+	}
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		// Directory doesn't exist yet - that's OK, it will be created
+		return "ok:Thư mục sẽ được tạo tự động: " + path
+	}
+	if !info.IsDir() {
+		return "error:Đây là file, cần trỏ đến thư mục"
+	}
+	// Check if writable by trying to create a temp file
+	testFile := filepath.Join(path, ".veo3_test_write")
+	f, err := os.Create(testFile)
+	if err != nil {
+		return "error:Không có quyền ghi vào thư mục này"
+	}
+	f.Close()
+	os.Remove(testFile)
+	return "ok:Thư mục hợp lệ: " + path
+}
+
+func (a *App) ValidateDownloadFolder(path string) string {
+	if path == "" {
+		defaultDir := filepath.Join(os.Getenv("USERPROFILE"), "Downloads", "veo3-manager")
+		return "ok:Sử dụng mặc định: " + defaultDir
+	}
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return "ok:Thư mục sẽ được tạo tự động: " + path
+	}
+	if !info.IsDir() {
+		return "error:Đây là file, cần trỏ đến thư mục"
+	}
+	testFile := filepath.Join(path, ".veo3_test_write")
+	f, err := os.Create(testFile)
+	if err != nil {
+		return "error:Không có quyền ghi vào thư mục này"
+	}
+	f.Close()
+	os.Remove(testFile)
+	return "ok:Thư mục hợp lệ: " + path
+}
+
 // === Window controls ===
 
 func (a *App) WindowMinimise() {

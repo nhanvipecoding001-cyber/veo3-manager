@@ -17,7 +17,7 @@ export function TitleBar() {
       <div className="flex items-center gap-2.5">
         <div className="w-2.5 h-2.5 rounded-full bg-accent" />
         <span className="text-xs font-semibold text-text-secondary tracking-wider uppercase">
-          Veo3 Manager
+          Thanh Nhàn VEO 3
         </span>
       </div>
 

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Save, FolderOpen, Globe, Power, PowerOff, Loader2, Timer, Terminal, Shield, ShieldCheck, Plug, Monitor } from 'lucide-react';
+import { Save, FolderOpen, Globe, Power, PowerOff, Loader2, Timer, Terminal, Shield, ShieldCheck, Plug, Monitor, CheckCircle, XCircle } from 'lucide-react';
 import { useSettingsStore } from '../stores/settingsStore';
 import { useAppStore } from '../stores/appStore';
-import { GetSettings, UpdateSetting, LaunchBrowser, DisconnectBrowser, GetBrowserStatus, GetBrowserInfo } from '../../wailsjs/go/main/App';
+import { GetSettings, UpdateSetting, LaunchBrowser, DisconnectBrowser, GetBrowserStatus, GetBrowserInfo, ValidateChromePath, ValidateUserDataDir, ValidateDownloadFolder, SelectFile, SelectDirectory } from '../../wailsjs/go/main/App';
 import { EventsOn, EventsOff } from '../../wailsjs/runtime/runtime';
 import { toast } from '../components/ui/Toast';
 import type { BrowserStatus, BrowserInfo } from '../types';
@@ -15,11 +15,16 @@ const STATUS_STYLES: Record<BrowserStatus, { dot: string; text: string; label: s
 };
 
 const SETTING_FIELDS = [
-  { key: 'chrome_path', label: 'Đường dẫn Chrome', icon: Globe, placeholder: 'Tự động phát hiện' },
-  { key: 'user_data_dir', label: 'Thư mục dữ liệu Chrome', icon: FolderOpen, placeholder: 'Mặc định' },
-  { key: 'download_folder', label: 'Thư mục tải về', icon: FolderOpen, placeholder: 'Mặc định' },
-  { key: 'debug_port', label: 'Debug Port', icon: Terminal, placeholder: '9222' },
-  { key: 'delay_between_tasks', label: 'Thời gian chờ giữa các tác vụ (giây)', icon: Timer, placeholder: '5' },
+  { key: 'chrome_path', label: 'Đường dẫn Chrome', icon: Globe, placeholder: 'Tự động phát hiện', picker: 'file' as const },
+  { key: 'user_data_dir', label: 'Thư mục dữ liệu Chrome', icon: FolderOpen, placeholder: 'Mặc định', picker: 'directory' as const },
+  { key: 'download_folder', label: 'Thư mục tải về', icon: FolderOpen, placeholder: 'Mặc định', picker: 'directory' as const },
+  { key: 'debug_port', label: 'Debug Port', icon: Terminal, placeholder: '9222', picker: null },
+] as const;
+
+const DELAY_PRESETS = [
+  { label: '10 giây', value: '10' },
+  { label: '20 giây', value: '20' },
+  { label: '30 giây', value: '30' },
 ] as const;
 
 export function SettingsPage() {
@@ -29,6 +34,8 @@ export function SettingsPage() {
   const [browserInfo, setBrowserInfo] = useState<BrowserInfo | null>(null);
   const [localSettings, setLocalSettings] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  const [validation, setValidation] = useState<Record<string, { status: 'ok' | 'error'; message: string } | null>>({});
+  const [delayCustom, setDelayCustom] = useState(false);
 
   useEffect(() => {
     GetSettings().then(setSettings);
@@ -60,12 +67,43 @@ export function SettingsPage() {
     } catch (err) { toast('error', `${err}`); }
   };
 
-  const hasChanges = SETTING_FIELDS.some(({ key }) => (localSettings[key] || '') !== (settings[key] || ''));
+  const handleBrowse = async (key: string, type: 'file' | 'directory', label: string) => {
+    try {
+      const path = type === 'file'
+        ? await SelectFile('Chọn ' + label)
+        : await SelectDirectory('Chọn ' + label);
+      if (path) {
+        setLocalSettings(prev => ({ ...prev, [key]: path }));
+        setValidation(prev => ({ ...prev, [key]: null }));
+      }
+    } catch (err) {
+      toast('error', `${err}`);
+    }
+  };
+
+  const handleValidate = async (key: string) => {
+    try {
+      let result = '';
+      if (key === 'chrome_path') result = await ValidateChromePath(localSettings[key] || '');
+      else if (key === 'user_data_dir') result = await ValidateUserDataDir(localSettings[key] || '');
+      else if (key === 'download_folder') result = await ValidateDownloadFolder(localSettings[key] || '');
+      else return;
+      const [status, ...msgParts] = result.split(':');
+      const message = msgParts.join(':');
+      setValidation(prev => ({ ...prev, [key]: { status: status as 'ok' | 'error', message } }));
+    } catch (err) {
+      setValidation(prev => ({ ...prev, [key]: { status: 'error', message: `${err}` } }));
+    }
+  };
+
+  const hasChanges = SETTING_FIELDS.some(({ key }) => (localSettings[key] || '') !== (settings[key] || ''))
+    || (localSettings.delay_between_tasks || '') !== (settings.delay_between_tasks || '');
 
   const handleSaveAll = async () => {
     setSaving(true);
     try {
-      for (const { key } of SETTING_FIELDS) {
+      const allKeys = [...SETTING_FIELDS.map(f => f.key), 'delay_between_tasks'];
+      for (const key of allKeys) {
         if ((localSettings[key] || '') !== (settings[key] || '')) {
           await UpdateSetting(key, localSettings[key] || '');
           updateSetting(key, localSettings[key] || '');
@@ -163,20 +201,96 @@ export function SettingsPage() {
 
       {/* Fields */}
       <div className="space-y-3">
-        {SETTING_FIELDS.map(({ key, label, icon: Icon, placeholder }, index) => (
-          <div key={key} className="card p-4 animate-list-item" style={{ animationDelay: `${(index + 1) * 60}ms` }}>
-            <label htmlFor={`setting-${key}`} className="flex items-center gap-2 text-xs font-medium text-text-secondary mb-2">
-              <Icon size={13} /> {label}
-            </label>
-            <input
-              id={`setting-${key}`}
-              value={localSettings[key] || ''}
-              onChange={(e) => setLocalSettings(prev => ({ ...prev, [key]: e.target.value }))}
-              placeholder={placeholder}
-              className="input-field w-full"
-            />
+        {SETTING_FIELDS.map(({ key, label, icon: Icon, placeholder, picker }, index) => {
+          const canValidate = key === 'chrome_path' || key === 'user_data_dir' || key === 'download_folder';
+          const v = validation[key];
+          return (
+            <div key={key} className="card p-4 animate-list-item" style={{ animationDelay: `${(index + 1) * 60}ms` }}>
+              <label htmlFor={`setting-${key}`} className="flex items-center gap-2 text-xs font-medium text-text-secondary mb-2">
+                <Icon size={13} /> {label}
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id={`setting-${key}`}
+                  value={localSettings[key] || ''}
+                  onChange={(e) => {
+                    setLocalSettings(prev => ({ ...prev, [key]: e.target.value }));
+                    setValidation(prev => ({ ...prev, [key]: null }));
+                  }}
+                  placeholder={placeholder}
+                  className="input-field flex-1"
+                />
+                {picker && (
+                  <button
+                    onClick={() => handleBrowse(key, picker, label)}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-bg-tertiary text-text-secondary hover:bg-bg-quaternary transition-colors shrink-0"
+                    title={`Chọn ${label}`}
+                  >
+                    <FolderOpen size={14} />
+                  </button>
+                )}
+                {canValidate && (
+                  <button
+                    onClick={() => handleValidate(key)}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-accent/10 text-accent hover:bg-accent/20 transition-colors shrink-0"
+                  >
+                    Kiểm tra
+                  </button>
+                )}
+              </div>
+              {canValidate && v && (
+                <div className={`flex items-center gap-1.5 mt-2 text-xs ${v.status === 'ok' ? 'text-success' : 'text-danger'}`}>
+                  {v.status === 'ok' ? <CheckCircle size={12} /> : <XCircle size={12} />}
+                  <span>{v.message}</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {/* Delay between tasks */}
+        <div className="card p-4 animate-list-item" style={{ animationDelay: `${(SETTING_FIELDS.length + 1) * 60}ms` }}>
+          <label className="flex items-center gap-2 text-xs font-medium text-text-secondary mb-3">
+            <Timer size={13} /> Thời gian chờ giữa các tác vụ (giây)
+          </label>
+          <div className="flex gap-2 mb-3">
+            {DELAY_PRESETS.map(({ label, value }) => (
+              <button
+                key={value}
+                onClick={() => { setLocalSettings(prev => ({ ...prev, delay_between_tasks: value })); setDelayCustom(false); }}
+                className={`flex-1 py-2 text-xs font-medium rounded-lg transition-colors ${
+                  !delayCustom && (localSettings.delay_between_tasks || '10') === value
+                    ? 'bg-accent text-white'
+                    : 'bg-bg-tertiary text-text-secondary hover:bg-bg-quaternary'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+            <button
+              onClick={() => { setDelayCustom(true); setLocalSettings(prev => ({ ...prev, delay_between_tasks: '' })); }}
+              className={`flex-1 py-2 text-xs font-medium rounded-lg transition-colors ${
+                delayCustom
+                  ? 'bg-accent text-white'
+                  : 'bg-bg-tertiary text-text-secondary hover:bg-bg-quaternary'
+              }`}
+            >
+              Tùy chỉnh
+            </button>
           </div>
-        ))}
+          {delayCustom && (
+            <input
+              value={localSettings.delay_between_tasks || ''}
+              onChange={(e) => setLocalSettings(prev => ({ ...prev, delay_between_tasks: e.target.value.replace(/\D/g, '') }))}
+              placeholder="Nhập số giây..."
+              className="input-field w-full"
+              type="number"
+              min="1"
+              autoFocus
+            />
+          )}
+        </div>
+
         <button
           onClick={handleSaveAll}
           disabled={!hasChanges || saving}
