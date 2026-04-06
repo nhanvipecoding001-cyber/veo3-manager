@@ -176,10 +176,10 @@ func (db *DB) GetTaskStats() (*TaskStats, error) {
 	err := db.conn.QueryRow(`
 		SELECT
 			COUNT(*),
-			SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END),
-			SUM(CASE WHEN status IN ('processing','polling','downloading') THEN 1 ELSE 0 END),
-			SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END),
-			SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END)
+			COALESCE(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN status IN ('processing','polling','downloading') THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0)
 		FROM tasks
 	`).Scan(&stats.Total, &stats.Pending, &stats.Processing, &stats.Completed, &stats.Failed)
 	if err != nil {

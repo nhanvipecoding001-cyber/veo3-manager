@@ -8,7 +8,9 @@ export function Dashboard() {
   const { stats, setStats } = useQueueStore();
 
   useEffect(() => {
-    GetTaskStats().then(setStats);
+    GetTaskStats()
+      .then(setStats)
+      .catch(() => setStats({ total: 0, completed: 0, pending: 0, processing: 0, failed: 0 }));
   }, [setStats]);
 
   const cards = [
